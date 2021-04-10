@@ -1,3 +1,6 @@
+.root{
+    -fx-font-size: 16;
+}
 .button{
 -fx-background-color: #1d08a3;
 -fx-text-fill: #f6fa11;

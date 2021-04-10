@@ -3,20 +3,26 @@
 <?import javafx.scene.control.TextField?>
 <?import javafx.scene.layout.*?>
 <?import java.net.URL?>
+<?import javafx.scene.control.PasswordField?>
 <VBox fx:controller="client.Controller"
-            xmlns:fx="http://javafx.com/fxml">
+      xmlns:fx="http://javafx.com/fxml" alignment="center">
     <stylesheets>
         <URL value="@/css/style.css"/>
     </stylesheets>
-    <HBox fx:id="loginPanel">
-        <TextField fx:id="loginField" HBox.hgrow="ALWAYS" promptText="Логин"/>
-        <TextField fx:id="passwordField" HBox.hgrow="ALWAYS" promptText="Пароль"/>
-        <Button text="Войти" onAction="#tryToAuth"/>
-    </HBox>
-            <TextArea fx:id="messages" VBox.vgrow="ALWAYS" editable="false"/>
 
-        <HBox fx:id="messagePanel" visible="false" managed="false">
-            <TextField fx:id="textField" HBox.hgrow="ALWAYS" promptText="Введите сообщение" onAction="#clickSend"/>
-            <Button text="Отправить" onAction="#clickSend"/>
-        </HBox>
+
+
+    <HBox fx:id="authPanel">
+        <TextField fx:id="loginField" HBox.hgrow="ALWAYS" promptText="Логин"/>
+        <PasswordField fx:id="passwordField" HBox.hgrow="ALWAYS" promptText="Пароль"/>
+        <Button text="Ввойти" onAction="#logIn" minWidth="100"/>
+    </HBox>
+
+    <TextArea fx:id="textArea" VBox.vgrow="ALWAYS" editable="false"/>
+
+    <HBox fx:id="messagePanel" visible="false" managed="false">
+        <TextField fx:id="textField" HBox.hgrow="ALWAYS" promptText="Введите сообщение" onAction="#sendMsg"/>
+        <Button text="Отправить" onAction="#sendMsg"/>
+    </HBox>
+
 </VBox>
