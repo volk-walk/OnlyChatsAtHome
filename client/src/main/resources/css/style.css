@@ -14,5 +14,9 @@
 -fx-font-stretch: expanded;
 -fx-control-inner-background: #f6fa11;
 -fx-text-fill: #1d08a3;
-
+}
+.list-view{
+-fx-background-color: #dbfa11;
+-fx-control-inner-background: #1d08a3;
+-fx-text-fill: #f6fa11;
 }

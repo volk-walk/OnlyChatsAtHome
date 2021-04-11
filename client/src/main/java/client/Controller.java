@@ -2,12 +2,21 @@ package client;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
+import javafx.event.EventHandler;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.Initializable;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.scene.control.ListView;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.stage.StageStyle;
+import javafx.stage.WindowEvent;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -29,6 +38,8 @@ public class Controller implements Initializable {
     public HBox authPanel;
     @FXML
     public HBox messagePanel;
+    @FXML
+    public ListView <String> clientList;
 
     private Socket socket;
     private DataInputStream in;
@@ -38,6 +49,8 @@ public class Controller implements Initializable {
     private boolean authenticated;
     private String nickname;
     private Stage stage;
+    private Stage registrationStage;
+    private RegistrationController registrationController;
 
 
     //метод отображения окон ввода логи и пароля
@@ -48,7 +61,8 @@ public class Controller implements Initializable {
         authPanel.setManaged(!authenticated);//если аутентикейтед тру, то панель аутентификации не резервирует место на окне чата и наоборот
         messagePanel.setVisible(authenticated);//если аутентикейтед тру, то панель ввода сообщений видно и наоборот
         messagePanel.setManaged(authenticated);//если аутентикейтед тру, то панель ввода сообщений резервирует место на окне чата и наоборот
-
+        clientList.setVisible(authenticated);
+        clientList.setManaged(authenticated);
         //если аутентикейтед тру, то стираем ник???
         if (!authenticated){
             nickname = "";
@@ -63,9 +77,21 @@ public class Controller implements Initializable {
         //не понял зачем это???
         Platform.runLater(()->{
                 stage = (Stage) textArea.getScene().getWindow();
+                stage.setOnCloseRequest(event -> {
+                    System.out.println("sss");
+                    if (socket != null && !socket.isClosed()){
+                        try {
+                            out.writeUTF("/end");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                });
         });
         setAuthenticated(false);
     }
+
+
     //метод для подключения окна чата к серверу
     private void connect(){
         try {
@@ -83,7 +109,6 @@ public class Controller implements Initializable {
                     if (str.startsWith("/")){
                         //если приходящее сообщение"/end", то выходим из аутентификации - не работает
                         if (str.equals("/end")) {
-                            System.out.println("disconnect");
                             break;
                         }
                         //если приходящее сообщение начинается на /auth_okay,
@@ -102,16 +127,32 @@ public class Controller implements Initializable {
                 //цикл работы окна отправки сообщений
                 while (authenticated) {
                     String str = in.readUTF();
-                    if (str.equals("/end")) {
-                        System.out.println("disconnect");
-                        break;
+                    if (str.startsWith("/")){
+                        if (str.equals("/end")) {
+
+                            break;
+                        }
+                        if (str.startsWith("/clientList ")){
+                            String[] token = str.split("\\s+");
+                            Platform.runLater(()->{
+                                clientList.getItems().clear();
+                                for (int i = 1; i < token.length; i++) {
+                                    clientList.getItems().add(token[i]);
+                                }
+                            });
+
+                        }
+                    }else {
+                        textArea.appendText(str + "\n");
                     }
-                    textArea.appendText(str + "\n");
+
+
                 }
             } catch (IOException e) {
                 e.printStackTrace();
             } finally {
                 //при выходе из аккаунте меняем окно сообщений на окно аутентификации
+                System.out.println("disconnect");
                 setAuthenticated(false);
                 try {
                     socket.close();//закрываем сокет
@@ -124,6 +165,7 @@ public class Controller implements Initializable {
             e.printStackTrace();
         }
     }
+
     //метод отправки сообщений
     @FXML
     public void sendMsg() {
@@ -137,6 +179,8 @@ public class Controller implements Initializable {
 
 
     }
+
+
     //метод отправки данных с полей логина и пароля по кнопке Log in
     @FXML
     public void logIn(ActionEvent actionEvent) {
@@ -154,6 +198,7 @@ public class Controller implements Initializable {
             e.printStackTrace();
         }
     }
+
     //метод подставляющий в титл ник при аутентификации
     private void setTitle(String nickname){
         Platform.runLater(()->{
@@ -165,4 +210,36 @@ public class Controller implements Initializable {
 
         });
     }
+
+    @FXML
+    public void clickClientList(MouseEvent mouseEvent) {
+        String recipient = clientList.getSelectionModel().getSelectedItem();
+        textField.setText("/w "+recipient+" ");
+    }
+    public void createRegistrationWindow(){
+        try {
+            FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/registration.fxml"));
+            Parent root = fxmlLoader.load();
+            registrationStage = new Stage();
+            registrationStage.setTitle("Registration in <Open chat>");
+            registrationStage.setScene(new Scene(root, 400, 300));
+
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.initStyle(StageStyle.UTILITY);
+
+            registrationController = fxmlLoader.getController();
+            registrationController.setController(this);
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    @FXML
+    public void tryToReg(ActionEvent actionEvent){
+        if (registrationStage == null){
+            createRegistrationWindow();
+        }
+        registrationStage.show();
+    }
+
 }

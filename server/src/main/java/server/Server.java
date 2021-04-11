@@ -21,7 +21,7 @@ public class Server {
         try {
             //Создаем серверный сокет
             server = new ServerSocket(PORT);
-            System.out.println("Сервер запустился");
+            System.out.println("Я внутри))) Начинаю взлом");
 
             // в бесконечном цикле ждем подключения к серверу
             while (true) {
@@ -55,7 +55,7 @@ public class Server {
     public void privateMessage(ClientHandler sender, String recipient, String msg){
 
         for (ClientHandler c: clients) {
-            String message = String.format("%s: %s", sender.getNickname(), msg);
+            String message = String.format("[%s] to [%s]: %s", sender.getNickname(),recipient, msg);
             if (recipient.equals(c.getNickname())){
                 c.sendMessage(message);
                 sender.sendMessage(message);
@@ -65,13 +65,33 @@ public class Server {
     //метод добавления клиентов в список при подключении
     public void subscribe(ClientHandler clientHandler) {
         clients.add(clientHandler);
+        broadcastClientList();
     }
     //метод удаления клиентов из списка при отключении
     public void unsubscribe(ClientHandler clientHandler) {
         clients.remove(clientHandler);
+        broadcastClientList();
     }
 
     public AuthService getAuthService() {
         return authService;
+    }
+    public boolean loginIsAuthenticated(String login){
+        for (ClientHandler c:clients) {
+            if (login.equals(c.getLogin())){
+                return true;
+            }
+        }
+        return false;
+    }
+    public void broadcastClientList(){
+        StringBuilder sb = new StringBuilder("/clientList");
+        for (ClientHandler c: clients) {
+            sb.append(" ").append(c.getNickname());
+        }
+        String message = sb.toString();
+        for (ClientHandler c: clients) {
+            c.sendMessage(message);
+        }
     }
 }

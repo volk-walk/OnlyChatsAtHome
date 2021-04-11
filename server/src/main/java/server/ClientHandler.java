@@ -11,9 +11,10 @@ public class ClientHandler {
     private DataInputStream in;
     private DataOutputStream out;
     private String nickname;
+    private String login;
 
     //конструктор подключаемого клиента
-    public ClientHandler (Server server, Socket socket){
+    public ClientHandler(Server server, Socket socket) {
         try {
             this.server = server;
             this.socket = socket;
@@ -33,28 +34,33 @@ public class ClientHandler {
                         //при отправке "/end" закрываем соединение
                         if (clientMessage.equals("/end")) {
                             out.writeUTF("/end");
-                            break;
+                            throw new RuntimeException("Клиент решил отключиться");
                         }
                         //если сообщение начинается на /auth
                         //считываем его как попытку аутентифицироваться
                         //???не понял как мы понимаем, что приходящее сообщение начинается на /auth,???
                         //???мы же не отправляем такого сообщения????
-                        if (clientMessage.startsWith("/auth")){
+                        if (clientMessage.startsWith("/auth")) {
                             //разделяем приходящее сообщение с помощью сплита
                             //на 2 токена: логин и пароль
-                            String [] token = clientMessage.split("\\s+");
+                            String[] token = clientMessage.split("\\s+");
                             String newNick = server
                                     .getAuthService()
-                                    .getNicknameByLoginAndPassword(token[1],token[2] );
-                            if (newNick != null){
-                                nickname = newNick;
-                                sendMessage("/auth_okay " + nickname);
-                                server.subscribe(this);
-                                System.out.println("Клиент аутентифицировался. Никнейм "+ nickname +
-                                        " Адрес: " + socket.getRemoteSocketAddress());
-                                break;
-                            }else{
-                                sendMessage("Неверный логин или пароль" +"\n");
+                                    .getNicknameByLoginAndPassword(token[1], token[2]);
+                            if (newNick != null) {
+                                login = token[1];
+                                if (!server.loginIsAuthenticated(login)) {
+                                    nickname = newNick;
+                                    sendMessage("/auth_okay " + nickname);
+                                    server.subscribe(this);
+                                    System.out.println("Клиент аутентифицировался. Никнейм " + nickname +
+                                            " Адрес: " + socket.getRemoteSocketAddress());
+                                    break;
+                                } else {
+                                    sendMessage("Такой пользователь уже авторизирован. Попробуйте снова" + "\n");
+                                }
+                            } else {
+                                sendMessage("Неверный логин или пароль" + "\n");
                             }
                         }
                     }
@@ -71,21 +77,23 @@ public class ClientHandler {
                             out.writeUTF("/end");
                             break;
                         }
-                        if(clientMessage.startsWith("/w")){
-                            String[] token = clientMessage.split("\\s+",3);
+                        if (clientMessage.startsWith("/w")) {
+                            String[] token = clientMessage.split("\\s+", 3);
                             server.privateMessage(this, token[1], token[2]);
-                        }else{
+                        } else {
                             //отправляем введенное сообщение всем подключенным клиентам
                             server.broadcastMessage(this, clientMessage);
                         }
                     }
+                }catch (RuntimeException e){
+                    System.out.println(e.getMessage());
                 } catch (IOException e) {
                     e.printStackTrace();
                 } finally {
                     //обязательно удаляем клиента из списка подключенных клиентов,
                     // при его выходе из чата
                     server.unsubscribe(this);
-                    System.out.println("Client " +socket.getRemoteSocketAddress() + " disconnect");
+                    System.out.println("Client " + socket.getRemoteSocketAddress() + " disconnect");
                     try {
                         socket.close();
                     } catch (IOException e) {
@@ -98,16 +106,22 @@ public class ClientHandler {
         }
 
     }
+
     //метод для отправки сообщений, написанных клиентом
-    public void sendMessage (String msg){
+    public void sendMessage(String msg) {
         try {
             out.writeUTF(msg);
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
+
     //геттер никнейма подлкюченного клиента
     public String getNickname() {
         return nickname;
+    }
+
+    public String getLogin() {
+        return login;
     }
 }
