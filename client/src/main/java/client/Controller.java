@@ -118,6 +118,13 @@ public class Controller implements Initializable {
                             setAuthenticated(true);
                             break;
                         }
+                        if (str.startsWith("/reg_ok")){
+                            registrationController.showResult("/reg_ok");
+                        }
+                        if (str.startsWith("/reg_no")){
+                            registrationController.showResult("/reg_no");
+                        }
+
                     }else {
                         textArea.appendText(str);
                     }
@@ -224,8 +231,8 @@ public class Controller implements Initializable {
             registrationStage.setTitle("Registration in <Open chat>");
             registrationStage.setScene(new Scene(root, 400, 300));
 
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.initStyle(StageStyle.UTILITY);
+            registrationStage.initModality(Modality.APPLICATION_MODAL);
+            registrationStage.initStyle(StageStyle.UTILITY);
 
             registrationController = fxmlLoader.getController();
             registrationController.setController(this);
@@ -235,11 +242,23 @@ public class Controller implements Initializable {
         }
     }
     @FXML
-    public void tryToReg(ActionEvent actionEvent){
+    public void tryToReg (ActionEvent actionEvent){
         if (registrationStage == null){
             createRegistrationWindow();
         }
         registrationStage.show();
+    }
+
+    public void registration (String login, String nickname, String password){
+        if (socket == null || socket.isClosed()){
+            connect();
+        }
+        String msg = String.format("/reg %s %s %s",login, nickname, password);
+        try {
+            out.writeUTF(msg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
 }

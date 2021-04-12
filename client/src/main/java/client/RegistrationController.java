@@ -20,6 +20,11 @@ public class RegistrationController {
 
     @FXML
     public void tryToReg(ActionEvent actionEvent) {
+        String login = loginField.getText().trim();
+        String nickname = nicknameField.getText().trim();
+        String password = passwordField.getText().trim();
+
+        controller.registration(login,nickname,password);
     }
     public void showResult(String result){
         if (result.equals("/reg_ok")){

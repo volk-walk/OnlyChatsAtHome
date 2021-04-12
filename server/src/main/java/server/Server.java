@@ -51,7 +51,6 @@ public class Server {
             c.sendMessage(message);
         }
     }
-// /w qaz sdfsdfsd
     public void privateMessage(ClientHandler sender, String recipient, String msg){
 
         for (ClientHandler c: clients) {

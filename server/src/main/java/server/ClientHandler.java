@@ -4,6 +4,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 
 public class ClientHandler {
     private Server server;
@@ -27,6 +28,7 @@ public class ClientHandler {
             //чтобы можно было читать сразу нескольким клиентам
             new Thread(() -> {
                 try {
+                    socket.setSoTimeout(120000);
                     //цикл аунтентификации
                     while (true) {
                         //считываем приходящие данные логина и пароля
@@ -43,7 +45,10 @@ public class ClientHandler {
                         if (clientMessage.startsWith("/auth")) {
                             //разделяем приходящее сообщение с помощью сплита
                             //на 2 токена: логин и пароль
-                            String[] token = clientMessage.split("\\s+");
+                            String[] token = clientMessage.split("\\s+", 3);
+                            if (token.length < 3) {
+                                continue;
+                            }
                             String newNick = server
                                     .getAuthService()
                                     .getNicknameByLoginAndPassword(token[1], token[2]);
@@ -55,6 +60,7 @@ public class ClientHandler {
                                     server.subscribe(this);
                                     System.out.println("Клиент аутентифицировался. Никнейм " + nickname +
                                             " Адрес: " + socket.getRemoteSocketAddress());
+                                    socket.setSoTimeout(0);
                                     break;
                                 } else {
                                     sendMessage("Такой пользователь уже авторизирован. Попробуйте снова" + "\n");
@@ -62,8 +68,26 @@ public class ClientHandler {
                             } else {
                                 sendMessage("Неверный логин или пароль" + "\n");
                             }
+
                         }
+                        //регистрация
+                        if (clientMessage.startsWith("/reg")) {
+                            //разделяем приходящее сообщение с помощью сплита
+                            String[] token = clientMessage.split("\\s+", 4);
+                            if (token.length < 4) {
+                                continue;
+                            }
+                            boolean b = server.getAuthService()
+                                    .registration(token[1], token[2], token[3]);
+                            if (b) {
+                                sendMessage("/reg_ok");
+                            } else {
+                                sendMessage("/reg_no");
+                            }
+                        }
+
                     }
+
 
                     //в бесконечном цикле ждем пока нам что-либо напишут или напишем мы
                     //цикл работы
@@ -84,6 +108,12 @@ public class ClientHandler {
                             //отправляем введенное сообщение всем подключенным клиентам
                             server.broadcastMessage(this, clientMessage);
                         }
+                    }
+                }catch (SocketTimeoutException e){
+                    try {
+                        out.writeUTF("/end");
+                    } catch (IOException ioException) {
+                        ioException.printStackTrace();
                     }
                 }catch (RuntimeException e){
                     System.out.println(e.getMessage());

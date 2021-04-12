@@ -14,7 +14,7 @@
     <TextField fx:id="loginField"  promptText="Логин"/>
     <TextField fx:id="nicknameField"  promptText="Никнейм"/>
     <PasswordField fx:id="passwordField"  promptText="Пароль"/>
-    <TextArea fx:id="textArea" VBox.vgrow="ALWAYS"
+    <TextArea fx:id="textArea" VBox.vgrow="ALWAYS"/>
     <Button text="Зарегистрироваться" onAction="#tryToReg" minWidth="100"/>
 
 </VBox>
