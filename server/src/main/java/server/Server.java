@@ -17,7 +17,8 @@ public class Server {
     public Server() {
         // удобный формат хранения списка подключенных клиентов
         clients = new CopyOnWriteArrayList<>();
-        authService = new SimpleAuthService();
+//        authService = new SimpleAuthService();
+        authService = new DataBaseAuthService();
         try {
             //Создаем серверный сокет
             server = new ServerSocket(PORT);

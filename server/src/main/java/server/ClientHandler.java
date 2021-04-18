@@ -40,8 +40,6 @@ public class ClientHandler {
                         }
                         //если сообщение начинается на /auth
                         //считываем его как попытку аутентифицироваться
-                        //???не понял как мы понимаем, что приходящее сообщение начинается на /auth,???
-                        //???мы же не отправляем такого сообщения????
                         if (clientMessage.startsWith("/auth")) {
                             //разделяем приходящее сообщение с помощью сплита
                             //на 2 токена: логин и пароль
@@ -100,6 +98,15 @@ public class ClientHandler {
                         if (clientMessage.equals("/end")) {
                             out.writeUTF("/end");
                             break;
+                        }
+                        if (clientMessage.startsWith("/changenickname")){
+                            String[] token = clientMessage.split("\\s+",3);
+                            boolean b = server.getAuthService().changeNickname(token[1],this.nickname);
+                            if (b){
+                                sendMessage("Никнейм успешно изменен\nНеобходимо перезайти");
+                            }else {
+                                sendMessage("Никнейм уже занят");
+                            }
                         }
                         if (clientMessage.startsWith("/w")) {
                             String[] token = clientMessage.split("\\s+", 3);
