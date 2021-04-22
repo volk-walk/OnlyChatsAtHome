@@ -18,11 +18,13 @@ import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import javafx.stage.WindowEvent;
 
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.net.Socket;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.Paths;
 import java.util.ResourceBundle;
 
 public class Controller implements Initializable {
@@ -51,6 +53,7 @@ public class Controller implements Initializable {
     private Stage stage;
     private Stage registrationStage;
     private RegistrationController registrationController;
+    private FileOutputStream fileOutputStream;
 
 
     //метод отображения окон ввода логи и пароля
@@ -74,7 +77,6 @@ public class Controller implements Initializable {
     //метод инициализации окна чата с полем для логина и пароля
     @Override
     public void initialize(URL location, ResourceBundle resources) {
-        //не понял зачем это???
         Platform.runLater(()->{
                 stage = (Stage) textArea.getScene().getWindow();
                 stage.setOnCloseRequest(event -> {
@@ -98,6 +100,7 @@ public class Controller implements Initializable {
             socket = new Socket(IP_ADDRESS, PORT);
             in = new DataInputStream(socket.getInputStream());
             out = new DataOutputStream(socket.getOutputStream());
+            String path = String.format("LocalHistoryOfMessage/history_%s.txt", loginField.getText());
 
             //отдельный поток для работы окна чата
             new Thread(() -> {
@@ -107,13 +110,14 @@ public class Controller implements Initializable {
                     String str = in.readUTF();
                     //если проходящее сообщение начинается на "/", то оно системное
                     if (str.startsWith("/")){
-                        //если приходящее сообщение"/end", то выходим из аутентификации - не работает
+                        //если приходящее сообщение"/end", то выходим из аутентификации
                         if (str.equals("/end")) {
                             break;
                         }
                         //если приходящее сообщение начинается на /auth_okay,
                         //аутентификации - тру, а никнейм равен первому токену?
                         if (str.startsWith("/auth_okay")){
+                            fileOutputStream = new FileOutputStream(path,true);
                             nickname = str.split("\\s+")[1];
                             setAuthenticated(true);
                             break;
@@ -130,10 +134,17 @@ public class Controller implements Initializable {
                     }
 
                 }
-
+                //вывод истории сообщений
+                for (String s: Files.readAllLines(Paths.get(path))) {
+                    textArea.appendText(s+"\n");
+                }
                 //цикл работы окна отправки сообщений
                 while (authenticated) {
+
                     String str = in.readUTF();
+                    String msgHistory = str + "\n";
+
+
                     if (str.startsWith("/")){
                         if (str.equals("/end")) {
 
@@ -150,6 +161,7 @@ public class Controller implements Initializable {
 
                         }
                     }else {
+                        fileOutputStream.write(msgHistory.getBytes(StandardCharsets.UTF_8));
                         textArea.appendText(str + "\n");
                     }
 
