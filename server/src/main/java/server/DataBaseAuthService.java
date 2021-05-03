@@ -4,90 +4,84 @@ import java.sql.*;
 
 public class DataBaseAuthService implements AuthService {
     private static Connection connection;
-    private static Statement stmt;
+    private static PreparedStatement psGetNickname;
+    private static PreparedStatement psRegistration;
+    private static PreparedStatement psChangeNickname;
 
     @Override
     public String getNicknameByLoginAndPassword(String login, String password) {
+        String nickname = null;
         try {
-            connect();
-            ResultSet rs = stmt.executeQuery("SELECT login, password, nickname FROM clients");
+            psGetNickname.setString(1, login);
+            psGetNickname.setString(2, password);
+            ResultSet rs = psGetNickname.executeQuery();
 
-            while (rs.next()){
-                if (rs.getString("login").equals(login)
-                        && rs.getString("password").equals(password)){
-                    return rs.getString("nickname");
+                if (rs.next()) {
+                    nickname = rs.getString("nickname");
                 }
-            }
                 rs.close();
         } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            disconnect();
         }
-        return null;
+        return nickname;
     }
 
     @Override
     public boolean registration(String login, String nickname, String password) {
         try {
-            connect();
-            ResultSet rs = stmt.executeQuery("SELECT login, password, nickname FROM clients");
+            psRegistration.setString(1, login);
+            psRegistration.setString(2, password);
+            psRegistration.setString(3, nickname);
+            psRegistration.executeUpdate();
+            return true;
 
-            while (rs.next()){
-                if(rs.getString("login").equals(login)
-                        || rs.getString("nickname").equals(nickname)){
-                    return false;
-                }
-
-            }
-            String str = String.format("INSERT INTO clients (login, password, nickname) VALUES ('%s', '%s', '%s')"
-                    , login, password,nickname);
-            stmt.executeUpdate(str);
-        } catch (Exception e) {
+        } catch (SQLException e) {
             e.printStackTrace();
-        } finally {
-            disconnect();
+            return false;
         }
-        return true;
     }
 
     @Override
-    public boolean changeNickname(String newNickname, String login) {
+    public boolean changeNickname(String newNickname, String oldNickname) {
         try {
-            connect();
-            ResultSet rs = stmt.executeQuery("SELECT nickname FROM clients");
-            while(rs.next()){
-                if (rs.getString("nickname").equals(newNickname)){
-                    return false;
-                }
-            }
-            String str = String.format("UPDATE clients SET nickname = '%s' WHERE login = '%s'", newNickname, login);
-            stmt.executeUpdate(str);
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }finally {
-            disconnect();
+            psChangeNickname.setString(1, newNickname);
+            psChangeNickname.setString(2, oldNickname);
+            psChangeNickname.executeUpdate();
+            return true;
+        } catch (SQLException e) {
+            return false;
         }
-        return true;
     }
 
-    private static void connect() throws ClassNotFoundException, SQLException {
-        Class.forName("org.sqlite.JDBC");
-        connection = DriverManager.getConnection("jdbc:sqlite:main.db");
-        stmt = connection.createStatement();
-    }
-
-    private static void disconnect() {
+    public static boolean connect(){
         try {
-            stmt.close();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+            Class.forName("org.sqlite.JDBC");
+            connection = DriverManager.getConnection("jdbc:sqlite:main.db");
+            prepareAllStatements();
+            return true;
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static void disconnect() {
+        try {
+            psRegistration.close();
+            psGetNickname.close();
+            psChangeNickname.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
         try {
             connection.close();
-        } catch (SQLException throwables) {
-            throwables.printStackTrace();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
+    }
+    public static void prepareAllStatements() throws SQLException{
+        psGetNickname = connection.prepareStatement("SELECT nickname FROM clients WHERE login = ? AND password = ?;");
+        psRegistration = connection.prepareStatement("INSERT INTO clients(login, password, nickname) VALUES (? ,? ,? );");
+        psChangeNickname = connection.prepareStatement("UPDATE clients SET nickname = ? WHERE nickname = ?;");
     }
 }

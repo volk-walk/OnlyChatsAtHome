@@ -5,8 +5,10 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.logging.Logger;
 
 public class Server {
+    private static final Logger logger = Logger.getLogger(Server.class.getName());
     public static ServerSocket server; //серверный сокет
     public static final int PORT = 8189; //порт для подключения клиентов
     public static Socket socket; //сокет связи с клиентами
@@ -18,25 +20,28 @@ public class Server {
         // удобный формат хранения списка подключенных клиентов
         clients = new CopyOnWriteArrayList<>();
 //        authService = new SimpleAuthService();
+        if (!DataBaseAuthService.connect()){
+            logger.info("Ошибка. Не удалось подключиться к базе данных");
+            throw new RuntimeException("Не удалось подключиться к базе данных");
+        }
         authService = new DataBaseAuthService();
         try {
             //Создаем серверный сокет
             server = new ServerSocket(PORT);
-            System.out.println("Я внутри))) Начинаю взлом");
+            logger.info("Сервер запущеню");
 
             // в бесконечном цикле ждем подключения к серверу
             while (true) {
 
                 //ждем подключения
                 socket = server.accept();
-                System.out.println("Client connected" + socket.getRemoteSocketAddress());
-
                 //при подключении добавляем клиента в список их хранения
                 new ClientHandler(this, socket);
             }
         } catch (IOException e) {
             e.printStackTrace();
         } finally {
+            DataBaseAuthService.disconnect();
             try {
                 socket.close();
                 server.close();

@@ -5,6 +5,9 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketTimeoutException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.logging.Logger;
 
 public class ClientHandler {
     private Server server;
@@ -13,6 +16,7 @@ public class ClientHandler {
     private DataOutputStream out;
     private String nickname;
     private String login;
+    private static final Logger logger = Logger.getLogger(ClientHandler.class.getName());
 
     //конструктор подключаемого клиента
     public ClientHandler(Server server, Socket socket) {
@@ -56,14 +60,16 @@ public class ClientHandler {
                                     nickname = newNick;
                                     sendMessage("/auth_okay " + nickname);
                                     server.subscribe(this);
-                                    System.out.println("Клиент аутентифицировался. Никнейм " + nickname +
+                                    logger.info("Клиент аутентифицировался. Логин " + login +
                                             " Адрес: " + socket.getRemoteSocketAddress());
                                     socket.setSoTimeout(0);
                                     break;
                                 } else {
+                                    logger.info("Неудачная попытка аутентификации.");
                                     sendMessage("Такой пользователь уже авторизирован. Попробуйте снова" + "\n");
                                 }
                             } else {
+                                logger.info("Неудачная попытка аутентификации.");
                                 sendMessage("Неверный логин или пароль" + "\n");
                             }
 
@@ -78,6 +84,8 @@ public class ClientHandler {
                             boolean b = server.getAuthService()
                                     .registration(token[1], token[2], token[3]);
                             if (b) {
+                                logger.info("Зарегистрирован новый пользователь.\nЛогин: " + token[1] +
+                                        "\nНикнейм: " + token[2]);
                                 sendMessage("/reg_ok");
                             } else {
                                 sendMessage("/reg_no");
@@ -100,19 +108,33 @@ public class ClientHandler {
                             break;
                         }
                         if (clientMessage.startsWith("/changenickname")){
-                            String[] token = clientMessage.split("\\s+",3);
-                            boolean b = server.getAuthService().changeNickname(token[1],this.nickname);
-                            if (b){
-                                sendMessage("Никнейм успешно изменен\nНеобходимо перезайти");
-                            }else {
-                                sendMessage("Никнейм уже занят");
+                            logger.info("Попытка смены ника у клиента:" + this.login);
+                            String[] token = clientMessage.split("\\s+",2);
+                            if (token.length < 2){
+                                continue;
                             }
+                            if (token[1].contains(" ")){
+                                sendMessage("Никнейк не может содержать пробелы");
+                                continue;
+                            }
+                            if (server.getAuthService().changeNickname(token[1],this.nickname)){
+                                logger.info("Клиент: " + this.login + " cменил никнейм с " + this.nickname +
+                                        " на " + token[1]);
+                                sendMessage("/yournickis " + token[1]);
+                                sendMessage("Ваш никнейм изменен на " + token[1]);
+                                this.nickname = token[1];
+                                server.broadcastClientList();
+                            }else {
+                                sendMessage("Не удалось изменить никнейм. Никнейм " + token[1] + " уже занят.");
+                            }
+
                         }
                         if (clientMessage.startsWith("/w")) {
                             String[] token = clientMessage.split("\\s+", 3);
                             server.privateMessage(this, token[1], token[2]);
                         } else {
                             //отправляем введенное сообщение всем подключенным клиентам
+                            logger.info("Клиент " + login + " отправил сообщение.");
                             server.broadcastMessage(this, clientMessage);
                         }
                     }
@@ -130,7 +152,7 @@ public class ClientHandler {
                     //обязательно удаляем клиента из списка подключенных клиентов,
                     // при его выходе из чата
                     server.unsubscribe(this);
-                    System.out.println("Client " + socket.getRemoteSocketAddress() + " disconnect");
+                    logger.info("Клиент " + login + " " + socket.getRemoteSocketAddress() + " отключился");
                     try {
                         socket.close();
                     } catch (IOException e) {

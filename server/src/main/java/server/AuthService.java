@@ -16,5 +16,5 @@ public interface AuthService {
     /**
      * Попытка сменить никнейм
      * */
-    boolean changeNickname(String newNickname, String login);
+    boolean changeNickname(String newNickname, String oldNickname);
 }

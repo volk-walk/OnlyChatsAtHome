@@ -160,6 +160,11 @@ public class Controller implements Initializable {
                             });
 
                         }
+                        if (str.startsWith("/yournickis ")){
+                            nickname = str.split(" ")[1];
+                            setTitle(nickname);
+                        }
+
                     }else {
                         fileOutputStream.write(msgHistory.getBytes(StandardCharsets.UTF_8));
                         textArea.appendText(str + "\n");
